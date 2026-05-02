@@ -1,6 +1,6 @@
 PYTHON_EXEC = uv run python3
 UV = uv
-MAIN_FILE = main.py
+SRC = src
 
 all: install run
 
@@ -10,7 +10,7 @@ install:
 
 run:
 	@echo 'lunch R.A.G'
-	$(PYTHON_EXEC) $(MAIN_FILE)
+	$(PYTHON_EXEC) -m $(SRC)
 
 
 clean:
@@ -18,7 +18,7 @@ clean:
 	rm -rf __pycache__ .venv .uv
 
 debug:
-	uv run python -m pdb -m
+	uv run python -m pdb -m ${src}
 
 lint:
 	@echo 'check quality code (mypy/flake8) norme'
