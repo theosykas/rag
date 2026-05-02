@@ -12,17 +12,17 @@ run:
 	@echo 'lunch R.A.G'
 	$(PYTHON_EXEC) -m $(SRC)
 
-
 clean:
 	@echo 'remove artefact files'
-	rm -rf __pycache__ .venv .uv
+	rm -rf .venv .uv
+	rm -rf $(SRC)/__pycache__
 
 debug:
-	uv run python -m pdb -m ${src}
+	uv run python -m pdb -m ${SRC}
 
 lint:
 	@echo 'check quality code (mypy/flake8) norme'
-	flake8 . --exclude .venv
+	flake8 src --exclude .venv
 	mypy . --strict --warn-return-any \
 	--warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs \
 	--check-untyped-defs

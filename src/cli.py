@@ -1,11 +1,11 @@
 from pydantic import BaseModel
 from typing import List, Dict, Any
-import time
 
 
 class RagRes(BaseModel):
     text: str
     score_k: float = 0.0
+
 
 class RagCli(BaseModel):
     pass
