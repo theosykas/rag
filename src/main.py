@@ -1,4 +1,4 @@
-from cli import RagCli
+from .cli import RagCli
 import fire
 
 def main():

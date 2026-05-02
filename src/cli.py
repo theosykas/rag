@@ -5,7 +5,7 @@ import time
 
 class RagRes(BaseModel):
     text: str
-    score: float = 0.0
+    score_k: float = 0.0
 
 class RagCli(BaseModel):
     pass
