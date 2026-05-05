@@ -1,3 +1,4 @@
 {
-	"makefile.configureOnOpen": false
+	"makefile.configureOnOpen": false,
+	"cmake.sourceDirectory": "/home/thsykas/sgoinfre/rag/vllm-0.10.1"
 }
