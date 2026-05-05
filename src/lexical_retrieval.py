@@ -1,15 +1,28 @@
 from .data_models import MinimalSource
 from typing import List, Any
 from pathlib import Path
-from abc import abstractmethod
 import bm25s
+from abc import ABC, abstractmethod
 
 
-class LexicalSearch:
+class BaseSearch(ABC):
     def __init__(self, vllm_path: str) -> None:
         self.vllm_path = vllm_path
 
     @abstractmethod
+    def chunk_vllm(self, max_chunk_size: int = 2000) -> List[dict]:
+        pass
+
+    @abstractmethod
+    def indexing(self) -> List[Any]:
+        pass
+
+    @abstractmethod
+    def search_engine(self) -> List[str]:
+        pass
+
+
+class LexicalSearch(BaseSearch):
     def chunk_vllm(self, max_chunk_size: int = 2000) -> List[dict]:
         chunks = []
         try:
@@ -35,8 +48,10 @@ class LexicalSearch:
         #     print(c['source'])
         return chunks
 
-    @abstractmethod
-    def indexing_bm25(self) -> List[Any]:
+    def indexing(self) -> List[Any]:
         chunking_vllm = self.chunk_vllm(max_chunk_size=2000)
         retriver_indexing = bm25s.BM25(corpus=chunking_vllm)
         retriver_indexing.index(bm25s.tokenize(chunking_vllm))
+
+    def search_engine(self):
+        pass
