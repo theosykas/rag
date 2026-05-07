@@ -1,30 +1,36 @@
 from .data_models import MinimalSource
 from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
+    PythonCodeTextSplitter,
     MarkdownTextSplitter,
-    Language,
 )
+from sentence_transformers import SentenceTransformer
 from abc import ABC, abstractmethod
 from typing import List, Any
 from colorama import Fore
 from pathlib import Path
+import chromadb
+from chromadb import Chroma
 import bm25s
 import os
 
 
 class BaseSearch(ABC):
-    def __init__(self, vllm_path: str) -> None:
+    def __init__(self, vllm_path: str, idx_path: str) -> None:
         self.vllm_path = vllm_path
+        self.retriver = None
+        self.idx_save = Path(idx_path)
+        self.data_corpus = []
 
     def chunk_vllm(self, max_chunk_size: int = 2000) -> List[dict]:
         chunks = []
-        py_split = RecursiveCharacterTextSplitter.from_language(
-            Language.PYTHON, chunk_size=max_chunk_size, chunk_overlap=20
+        py_split = PythonCodeTextSplitter(
+            chunk_size=max_chunk_size, chunk_overlap=200
         )
         md_split = MarkdownTextSplitter(chunk_size=max_chunk_size,
-                                        chunk_overlap=20)
+                                        chunk_overlap=200)
         default_split = RecursiveCharacterTextSplitter(
-            chunk_size=max_chunk_size, chunk_overlap=20
+            chunk_size=max_chunk_size, chunk_overlap=200  # ovelap === char
         )
         for llm_file in Path(self.vllm_path).rglob("*"):
             if not llm_file.is_file():
@@ -72,10 +78,7 @@ class BaseSearch(ABC):
 
 class LexicalSearch(BaseSearch):
     def __init__(self, vllm_path, idx_path: str):
-        super().__init__(vllm_path)
-        self.retriver = None
-        self.idx_save = Path(idx_path)
-        self.data_corpus = []
+        super().__init__(vllm_path, idx_path)
 
     def indexing(self) -> List[Any]:
         chunking_vllm = self.chunk_vllm(max_chunk_size=2000)
@@ -92,9 +95,42 @@ class LexicalSearch(BaseSearch):
             print(f"[Error] {e}")
         self.retriver.save(save_dir=str(self.idx_save), corpus=chunking_vllm)
 
-    def search_engine(self, qwery_user: str,
+    def search_engine(self, query_user,
                       k: int = 10) -> List[MinimalSource]:
-        qwery = bm25s.tokenize(qwery_user)
+        qwery = bm25s.tokenize(query_user)
         scoring, res_k = self.retriver.retrieve(
-            query_tokens=qwery, k=k)  # score/k
+                query_tokens=qwery, k=k)  # score/k
         return [MinimalSource(**item["source"]) for item in res_k[0]]
+
+
+class SementicalSearch(BaseSearch):
+    def __init__(self, vllm_path: str, idx_path: str) -> None:
+        super().__init__(vllm_path, idx_path)
+        self.client = chromadb.PersistentClient(str(self.idx_save))
+        self.collection_chroma = self.client.get_or_create_collection("c_Vllm")
+
+    def indexing(self):
+        chunking_vllm = self.chunk_vllm(max_chunk_size=2000)
+        self.data_corpus = chunking_vllm
+        model_embedding = SentenceTransformer(
+            "sentence-transformer/all-MiniLM-L6-v2")  # create emmbeding sent
+        txt = [c["text"] for c in chunking_vllm]
+        embeddings = model_embedding.encode(chunking_vllm)
+        self.collection_chroma.add(
+            documents=txt,
+            embeddings=embeddings,
+            metadatas=[c["source"] for c in chunking_vllm],
+            ids=[str(i) for i in range(len(chunking_vllm))]  # idx all chunk
+        )
+        try:
+            os.makedirs(self.idx_save, exist_ok=True)
+        except OSError as e:
+            print(f"[Error] {e}")
+
+    def search_engine(self, query_user, k: int = 10) -> List[MinimalSource]:
+        resultat = self.collection_chroma.query(
+            query_texts=query_user,
+            n_results=k
+        )
+        return [MinimalSource(**item["source"])
+                for item in resultat["metadatas"][0]]
