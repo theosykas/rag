@@ -9,12 +9,13 @@ import fire
 def main():
     generate = Generator("output.json")
     # model_emb = get_embadded("all-MiniLM-L6-v2")  # vector sementique search
-    lexical_retrive = LexicalSearch(vllm_path="vllm-0.10.1")
+    lexical_retrive = LexicalSearch(vllm_path="vllm-0.10.1",
+                                    idx_path="data/processed/bm25")
     try:
         rag_cli = RagCli()
         generate.generate_json(list(range(50)))
         fire.Fire(rag_cli)
-        lexical_retrive.chunk_vllm(max_chunk_size=2000)
+        lexical_retrive.indexing()
     except Exception as e:
         print(f'{Fore.RED}[ERROR] {e}')
 
