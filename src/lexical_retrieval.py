@@ -1,6 +1,12 @@
 from .data_models import MinimalSource
+from langchain_text_splitters import (
+    RecursiveCharacterTextSplitter,
+    MarkdownTextSplitter,
+    Language,
+)
 from abc import ABC, abstractmethod
 from typing import List, Any
+from colorama import Fore
 from pathlib import Path
 import bm25s
 import os
@@ -12,27 +18,47 @@ class BaseSearch(ABC):
 
     def chunk_vllm(self, max_chunk_size: int = 2000) -> List[dict]:
         chunks = []
-        try:
-            for llm_file in Path(self.vllm_path).rglob("*"):
-                if not llm_file.is_file():
-                    continue
+        py_split = RecursiveCharacterTextSplitter.from_language(
+            Language.PYTHON, chunk_size=max_chunk_size, chunk_overlap=20
+        )
+        md_split = MarkdownTextSplitter(chunk_size=max_chunk_size,
+                                        chunk_overlap=20)
+        default_split = RecursiveCharacterTextSplitter(
+            chunk_size=max_chunk_size, chunk_overlap=20
+        )
+        for llm_file in Path(self.vllm_path).rglob("*"):
+            if not llm_file.is_file():
+                continue
+            suffix = llm_file.suffix
+            if suffix == ".py":
+                splitter = py_split
+            elif suffix == ".md":
+                splitter = md_split
+            else:
+                splitter = default_split
+            try:
                 data_analyse = llm_file.read_text(encoding="utf-8")
-                for data_pos in range(0, len(data_analyse), max_chunk_size):
-                    chunk_text = data_analyse[data_pos: data_pos +
-                                              max_chunk_size]
-                    chunks.append({
+            except (UnicodeDecodeError, OSError) as e:
+                print(f"{Fore.RED}[Error] invalid file extension {e}")
+                continue
+            chunk_text = splitter.split_text(data_analyse)
+            search_idx_pos = 0
+            for chunk in chunk_text:
+                first_idx = data_analyse.find(chunk, search_idx_pos)
+                if first_idx == -1:
+                    first_idx = search_idx_pos  # error pos
+                lst_idx = first_idx + len(chunk)
+                chunks.append(
+                    {
                         "source": MinimalSource(
                             file_path=str(llm_file),
-                            first_character_index=data_pos,
-                            last_character_index=min(data_pos + max_chunk_size,
-                                                     len(data_analyse))
+                            first_character_index=first_idx,
+                            last_character_index=lst_idx,
                         ).model_dump(),  # serializable: json
-                        "text": chunk_text
-                        })
-        except (UnicodeDecodeError, OSError) as e:
-            print(f"[Error] {e}")
-        # for c in chunks[:3]:
-        #     print(c['source'])
+                        "text": chunk,
+                    }
+                )
+                search_idx_pos = first_idx + 1  # check + 1
         return chunks
 
     @abstractmethod
@@ -63,12 +89,12 @@ class LexicalSearch(BaseSearch):
         try:
             os.makedirs(self.idx_save, exist_ok=True)
         except OSError as e:
-            print(f'[Error] {e}')
-        self.retriver.save(save_dir=str(self.idx_save),
-                           corpus=chunking_vllm)
+            print(f"[Error] {e}")
+        self.retriver.save(save_dir=str(self.idx_save), corpus=chunking_vllm)
 
     def search_engine(self, qwery_user: str,
                       k: int = 10) -> List[MinimalSource]:
         qwery = bm25s.tokenize(qwery_user)
-        scoring, res = self.retriver.retrieve(query_tokens=qwery, k=k)
-        return [res['source'] for res in res[0]]
+        scoring, res_k = self.retriver.retrieve(
+            query_tokens=qwery, k=k)  # score/k
+        return [MinimalSource(**item["source"]) for item in res_k[0]]

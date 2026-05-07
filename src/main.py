@@ -4,6 +4,7 @@ from .generator import Generator
 from colorama import Fore
 from .cli import RagCli
 import fire
+# import time
 
 
 def main():
@@ -14,8 +15,11 @@ def main():
     try:
         rag_cli = RagCli()
         generate.generate_json(list(range(50)))
-        fire.Fire(rag_cli)
+        # start = time.time()
         lexical_retrive.indexing()
+        # elapsed = time.time() - start
+        # print(f"Indexing done in {elapsed:.1f}s / 300s max")
+        fire.Fire(rag_cli)
     except Exception as e:
         print(f'{Fore.RED}[ERROR] {e}')
 
