@@ -6,11 +6,10 @@ from langchain_text_splitters import (
 )
 from sentence_transformers import SentenceTransformer
 from abc import ABC, abstractmethod
-from typing import List, Any
+from typing import List, Any, Dict
 from colorama import Fore
 from pathlib import Path
 import chromadb
-from chromadb import Chroma
 import bm25s
 import os
 
@@ -109,23 +108,26 @@ class SementicalSearch(BaseSearch):
         self.client = chromadb.PersistentClient(str(self.idx_save))
         self.collection_chroma = self.client.get_or_create_collection("c_Vllm")
 
-    def indexing(self):
+    def indexing(self, batch_size: int = 5461) -> List[Dict]:
         chunking_vllm = self.chunk_vllm(max_chunk_size=2000)
         self.data_corpus = chunking_vllm
         model_embedding = SentenceTransformer(
-            "sentence-transformer/all-MiniLM-L6-v2")  # create emmbeding sent
+            "all-MiniLM-L6-v2")  # create emmbeding sent
         txt = [c["text"] for c in chunking_vllm]
-        embeddings = model_embedding.encode(chunking_vllm)
-        self.collection_chroma.add(
-            documents=txt,
-            embeddings=embeddings,
-            metadatas=[c["source"] for c in chunking_vllm],
-            ids=[str(i) for i in range(len(chunking_vllm))]  # idx all chunk
-        )
+        embeddings = model_embedding.encode(txt)
+        for i in range(0, len(chunking_vllm), batch_size):
+            end = min(i + batch_size, len(chunking_vllm))  # 0 iter + 5000 12000
+            self.collection_chroma.add(
+                documents=txt[i:end],  # [0:5000]
+                embeddings=embeddings[i:end],
+                metadatas=[c["source"] for c in chunking_vllm[i:end]],
+                ids=[str(data) for data in range(i, end)]  # idx all chunk
+            )
         try:
             os.makedirs(self.idx_save, exist_ok=True)
         except OSError as e:
             print(f"[Error] {e}")
+        print(self.collection_chroma)
 
     def search_engine(self, query_user, k: int = 10) -> List[MinimalSource]:
         resultat = self.collection_chroma.query(
