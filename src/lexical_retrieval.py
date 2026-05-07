@@ -7,8 +7,9 @@ from langchain_text_splitters import (
 from sentence_transformers import SentenceTransformer
 from abc import ABC, abstractmethod
 from typing import List, Any, Dict
-from colorama import Fore
+from colorama import Fore, Style
 from pathlib import Path
+# from tqdm import tqdm
 import chromadb
 import bm25s
 import os
@@ -43,8 +44,9 @@ class BaseSearch(ABC):
                 splitter = default_split
             try:
                 data_analyse = llm_file.read_text(encoding="utf-8")
-            except (UnicodeDecodeError, OSError) as e:
-                print(f"{Fore.RED}[Error] invalid file extension {e}")
+            except (UnicodeDecodeError, OSError):
+                print(f"{Fore.RED}[Error] "
+                      f"{Style.RESET_ALL}invalid file extension")
                 continue
             chunk_text = splitter.split_text(data_analyse)
             search_idx_pos = 0
@@ -114,7 +116,8 @@ class SementicalSearch(BaseSearch):
         model_embedding = SentenceTransformer(
             "all-MiniLM-L6-v2")  # create emmbeding sent
         txt = [c["text"] for c in chunking_vllm]
-        embeddings = model_embedding.encode(txt)
+        embeddings = model_embedding.encode(txt,
+                                            show_progress_bar=True)
         for i in range(0, len(chunking_vllm), batch_size):
             end = min(i + batch_size, len(chunking_vllm))  # 0 iter + 5000 12000
             self.collection_chroma.add(
@@ -127,7 +130,6 @@ class SementicalSearch(BaseSearch):
             os.makedirs(self.idx_save, exist_ok=True)
         except OSError as e:
             print(f"[Error] {e}")
-        print(self.collection_chroma)
 
     def search_engine(self, query_user, k: int = 10) -> List[MinimalSource]:
         resultat = self.collection_chroma.query(

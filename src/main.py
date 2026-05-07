@@ -1,6 +1,6 @@
 # from .retrieving_idx import get_embadded
 from .lexical_retrieval import LexicalSearch, SementicalSearch
-from .generator import Generator
+# from .generator import Generator
 from colorama import Fore
 from .cli import RagCli
 import fire
@@ -8,7 +8,7 @@ import time
 
 
 def main():
-    generate = Generator("output.json")
+    # generate = Generator("output.json")
     # model_emb = get_embadded("all-MiniLM-L6-v2")  # vector sementique search
     # lexical_retrive = LexicalSearch(vllm_path="vllm-0.10.1",
     #                                 idx_path="data/processed/bm25_index")
@@ -17,7 +17,7 @@ def main():
                                           "chromaDB_index")
     try:
         rag_cli = RagCli()
-        generate.generate_json(list(range(50)))
+        # generate.generate_json(list(range(50)))
         start = time.time()
         # lexical_retrive.indexing()
         sementical_retrive.indexing()
