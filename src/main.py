@@ -15,7 +15,7 @@ def main():
     #                                       idx_path="data/processed/"
     #                                       "chromaDB_index")
     try:
-        rag_cli = RagCli()
+        rag_cli = RagCli("vllm-0.10.1")
         fire.Fire(rag_cli)
         # generate.generate_json()
         # print(f"Indexing done in {elapsed:.1f}s / 300s max")

@@ -44,7 +44,8 @@ class BaseSearch(ABC):
             try:
                 data_analyse = llm_file.read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
-                print(f"invalid file extension {Fore.GREEN}{suffix}{Style.RESET_ALL}")
+                print(f"invalid file extension {Fore.GREEN}{suffix}"
+                      f"{Style.RESET_ALL}")
                 continue
             chunk_text = splitter.split_text(data_analyse)
             search_idx_pos = 0
@@ -77,23 +78,36 @@ class BaseSearch(ABC):
 
 
 class HybridSearch(BaseSearch):
-    def __init__(self, lexical: LexicalSearch, semtentical: SementicalSearch) -> None:
-        self.lexical_engine = lexical
-        self.sementical_engine = semtentical
+    def __init__(self, lexical: LexicalSearch,
+                 semtentical: SementicalSearch) -> None:
         self.model_ranking = CrossEncoder("ms-marco-MiniLM-L-6-v2")
+        self.sementical_engine = semtentical
+        self.lexical_engine = lexical
+
+    def indexing(self, max_chunk_size: int = 2000) -> List[Any]:
+        pass
+
+    # get all text for compare to rank
+    def get_text_chunk(self, src: MinimalSource):
+        content = Path(src.file_path).read_text(encoding="utf-8")
+        return content[src.first_character_index: src.last_character_index]
 
     def relevant_search(self, query: str, k: int = 10):
         lex_res = self.lexical_engine.relevant_search([query], k=k)
         sem_res = self.sementical_engine.relevant_search([query], k=k)
         pairs_cross = []
         unique_source = self.check_duplicated(lex_res + sem_res)
-        for res in unique_source:
-            chunk_txt =
+        for raw_src in unique_source:
+            chunk_txt = self.get_text_chunk(raw_src)
             pairs_cross.append([query, chunk_txt])
         scoring = self.model_ranking.predict(pairs_cross)
-        return unique_source[:k]  # final top K
+        sorted_score = sorted(zip(scoring, unique_source),
+                              key=lambda x: x[0], reverse=True)
+        return [src for score, src in sorted_score[:k]]  # final top K
 
-    def check_duplicated(src: List[MinimalSource]) -> List[MinimalSource]:
+    # check_duplicated chunking
+    def check_duplicated(self,
+                         src: List[MinimalSource]) -> List[MinimalSource]:
         is_check = set()
         unique_data = []
         for chunk in src:
@@ -112,7 +126,6 @@ class LexicalSearch(BaseSearch):
 
     def indexing(self, max_chunk_size: int = 2000) -> List[Any]:
         chunking_vllm = self.chunk_vllm(max_chunk_size)
-        # print(f"lexical idx = {max_chunk_size}")
         self.data_corpus = chunking_vllm
         txt = [c["text"] for c in chunking_vllm]
 
