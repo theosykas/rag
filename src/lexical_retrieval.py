@@ -1,4 +1,4 @@
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 from .data_models import MinimalSource
 from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
@@ -80,16 +80,31 @@ class HybridSearch(BaseSearch):
     def __init__(self, lexical: LexicalSearch, semtentical: SementicalSearch) -> None:
         self.lexical_engine = lexical
         self.sementical_engine = semtentical
-        # self.re_ranking = CrossEncoder
+        self.model_ranking = CrossEncoder("ms-marco-MiniLM-L-6-v2")
 
     def relevant_search(self, query: str, k: int = 10):
         lex_res = self.lexical_engine.relevant_search([query], k=k)
         sem_res = self.sementical_engine.relevant_search([query], k=k)
-        merge_res = lex_res + sem_res
-        unique_source = self._duplicate(merge_res)
+        pairs_cross = []
+        unique_source = self.check_duplicated(lex_res + sem_res)
+        for res in unique_source:
+            chunk_txt =
+            pairs_cross.append([query, chunk_txt])
+        scoring = self.model_ranking.predict(pairs_cross)
         return unique_source[:k]  # final top K
 
-    
+    def check_duplicated(src: List[MinimalSource]) -> List[MinimalSource]:
+        is_check = set()
+        unique_data = []
+        for chunk in src:
+            identify_chunk = (chunk.file_path,
+                              chunk.first_character_index,
+                              chunk.last_character_index)
+            if identify_chunk not in is_check:
+                is_check.add(identify_chunk)
+                unique_data.append(chunk)
+        return unique_data
+
 
 class LexicalSearch(BaseSearch):
     def __init__(self, vllm_path, idx_path: str):

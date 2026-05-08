@@ -1,4 +1,4 @@
-from .lexical_retrieval import LexicalSearch, SementicalSearch
+from .lexical_retrieval import LexicalSearch, SementicalSearch, HybridSearch
 from .data_models import MinimalAnswer
 from typing import List, Dict, Any
 from json import JSONDecodeError
@@ -16,10 +16,11 @@ class RagCli:
         self.sementical_idx = "data/processed/chromaDB_index"
         self.sementical_engine = SementicalSearch(vllm_path=self.vllm_path,
                                                   idx_path=self.sementical_idx)
+        self.merge_search = HybridSearch(self.lexical_engine,
+                                         self.sementical_engine)
 
     def index(self, max_chunk_size: int = 2000) -> str:
         self.lexical_engine.indexing(max_chunk_size)
-
         self.sementical_engine.indexing(max_chunk_size)
         return "Ingestion complete! Indices saved under data/processed/"
 
@@ -38,15 +39,12 @@ class RagCli:
 
     def awnser(self, single_query: str, k: int = 10) -> str:
         # return awnser into json file
-        lexical_retrive = self.lexical_engine.relevant_search([single_query],
-                                                              k=k)
-        sementical_retrive = self.sementical_engine.relevant_search([single_query],
-                                                                    k=k)
+        hybrid_search = self.merge_search.relevant_search(single_query, k=k)
         qwen_awnser = "hello qwen"
         generate_awnser = MinimalAnswer(
             question_id=str(uuid.uuid4()),  # generate id
             question=single_query,
-            retrieved_sources=lexical_retrive,
+            retrieved_sources=hybrid_search,
             answer=qwen_awnser
         ).model_dump()
         try:
@@ -58,8 +56,8 @@ class RagCli:
             print(f"[Error] {e}")
         return None
 
-    def awnser_dataset(self, generate_response: List[str]) -> List[RagRes]:
-        pass
+    # def awnser_dataset(self, generate_response: List[str]) -> List[RagRes]:
+    #     pass
 
     def evaluate_res(self, data_ref: str) -> Dict[str, Any]:
         pass
