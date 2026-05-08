@@ -1,15 +1,14 @@
+from sentence_transformers import SentenceTransformer
 from .data_models import MinimalSource
 from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
     PythonCodeTextSplitter,
     MarkdownTextSplitter,
 )
-from sentence_transformers import SentenceTransformer
 from abc import ABC, abstractmethod
 from typing import List, Any, Dict
 from colorama import Fore, Style
 from pathlib import Path
-# from tqdm import tqdm
 import chromadb
 import bm25s
 import os
@@ -17,10 +16,10 @@ import os
 
 class BaseSearch(ABC):
     def __init__(self, vllm_path: str, idx_path: str) -> None:
-        self.vllm_path = vllm_path
-        self.retriver = None
         self.idx_save = Path(idx_path)
+        self.vllm_path = vllm_path
         self.data_corpus = []
+        self.retriver = None
 
     def chunk_vllm(self, max_chunk_size: int = 2000) -> List[dict]:
         chunks = []
@@ -45,8 +44,7 @@ class BaseSearch(ABC):
             try:
                 data_analyse = llm_file.read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
-                print(f"{Fore.RED}[Error] "
-                      f"{Style.RESET_ALL}invalid file extension")
+                print(f"invalid file extension {Fore.GREEN}{suffix}{Style.RESET_ALL}")
                 continue
             chunk_text = splitter.split_text(data_analyse)
             search_idx_pos = 0
@@ -69,20 +67,37 @@ class BaseSearch(ABC):
         return chunks
 
     @abstractmethod
-    def indexing(self) -> List[Any]:
+    def indexing(self, max_chunk_size: int = 2000) -> List[Any]:
         pass
 
+    # find most pertinent chunk for response
     @abstractmethod
-    def search_engine(self) -> List[str]:
+    def relevant_search(self) -> List[str]:
         pass
 
+
+class HybridSearch(BaseSearch):
+    def __init__(self, lexical: LexicalSearch, semtentical: SementicalSearch) -> None:
+        self.lexical_engine = lexical
+        self.sementical_engine = semtentical
+        # self.re_ranking = CrossEncoder
+
+    def relevant_search(self, query: str, k: int = 10):
+        lex_res = self.lexical_engine.relevant_search([query], k=k)
+        sem_res = self.sementical_engine.relevant_search([query], k=k)
+        merge_res = lex_res + sem_res
+        unique_source = self._duplicate(merge_res)
+        return unique_source[:k]  # final top K
+
+    
 
 class LexicalSearch(BaseSearch):
     def __init__(self, vllm_path, idx_path: str):
         super().__init__(vllm_path, idx_path)
 
-    def indexing(self) -> List[Any]:
-        chunking_vllm = self.chunk_vllm(max_chunk_size=2000)
+    def indexing(self, max_chunk_size: int = 2000) -> List[Any]:
+        chunking_vllm = self.chunk_vllm(max_chunk_size)
+        # print(f"lexical idx = {max_chunk_size}")
         self.data_corpus = chunking_vllm
         txt = [c["text"] for c in chunking_vllm]
 
@@ -96,8 +111,8 @@ class LexicalSearch(BaseSearch):
             print(f"[Error] {e}")
         self.retriver.save(save_dir=str(self.idx_save), corpus=chunking_vllm)
 
-    def search_engine(self, query_user,
-                      k: int = 10) -> List[MinimalSource]:
+    def relevant_search(self, query_user: List[str],
+                        k: int = 10) -> List[MinimalSource]:
         qwery = bm25s.tokenize(query_user)
         scoring, res_k = self.retriver.retrieve(
                 query_tokens=qwery, k=k)  # score/k
@@ -110,8 +125,9 @@ class SementicalSearch(BaseSearch):
         self.client = chromadb.PersistentClient(str(self.idx_save))
         self.collection_chroma = self.client.get_or_create_collection("c_Vllm")
 
-    def indexing(self, batch_size: int = 5461) -> List[Dict]:
-        chunking_vllm = self.chunk_vllm(max_chunk_size=2000)
+    def indexing(self, max_chunk_size: int = 2000,
+                 batch_size: int = 5461) -> List[Dict]:
+        chunking_vllm = self.chunk_vllm(max_chunk_size)
         self.data_corpus = chunking_vllm
         model_embedding = SentenceTransformer(
             "all-MiniLM-L6-v2")  # create emmbeding sent
@@ -131,10 +147,11 @@ class SementicalSearch(BaseSearch):
         except OSError as e:
             print(f"[Error] {e}")
 
-    def search_engine(self, query_user, k: int = 10) -> List[MinimalSource]:
+    def relevant_search(self, query_user: List[str],
+                        k: int = 10) -> List[MinimalSource]:
         resultat = self.collection_chroma.query(
             query_texts=query_user,
             n_results=k
         )
-        return [MinimalSource(**item["source"])
+        return [MinimalSource(**item)
                 for item in resultat["metadatas"][0]]
