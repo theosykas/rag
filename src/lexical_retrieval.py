@@ -12,6 +12,7 @@ from pathlib import Path
 import chromadb
 import bm25s
 import os
+import traceback
 
 
 class BaseSearch(ABC):
@@ -139,7 +140,7 @@ class LexicalSearch(BaseSearch):
             print(f"[Error] {e}")
         self.retriver.save(save_dir=str(self.idx_save), corpus=chunking_vllm)
 
-    def relevant_search(self, query_user: List[str],
+    def relevant_search(self, query_user: str,
                         k: int = 10) -> List[MinimalSource]:
         qwery = bm25s.tokenize(query_user)
         scoring, res_k = self.retriver.retrieve(
@@ -175,7 +176,7 @@ class SementicalSearch(BaseSearch):
         except OSError as e:
             print(f"[Error] {e}")
 
-    def relevant_search(self, query_user: List[str],
+    def relevant_search(self, query_user: str,
                         k: int = 10) -> List[MinimalSource]:
         resultat = self.collection_chroma.query(
             query_texts=query_user,
