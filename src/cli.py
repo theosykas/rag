@@ -4,7 +4,9 @@ from .data_models import (
     MinimalSearchResults,
     StudentSearchResults,
     MinimalAnswer,
+    MinimalSource
 )
+from .qwen3_06B import Qwen
 from typing import List, Dict, Any
 from json import JSONDecodeError
 from pathlib import Path
@@ -26,6 +28,12 @@ class RagCli:
         )
         self.merge_search = HybridSearch(self.lexical_engine,
                                          self.sementical_engine)
+        self.qwen = None  # lazy load
+
+    def load_qwen(self):
+        if self.qwen is None:
+            self.qwen = Qwen()
+        return self.qwen
 
     def index(self, max_chunk_size: int = 2000) -> str:
         self.lexical_engine.indexing(max_chunk_size)
@@ -88,7 +96,12 @@ class RagCli:
     def awnser(self, single_query: str, k: int = 10) -> str:
         # return awnser into json file
         hybrid_search = self.merge_search.relevant_search(single_query, k=k)
-        qwen_awnser = "hello qwen"
+        context = "\n\n".join([
+            self.merge_search.get_text_chunk(src)
+            for src in hybrid_search
+        ])
+        qwen_awnser = self.load_qwen().generate(query=single_query,
+                                                context=context)
 
         generate_awnser = MinimalAnswer(
             question_id=str(uuid.uuid4()),  # generate id
@@ -114,7 +127,12 @@ class RagCli:
                 data_load = json.load(f)
             awnser_stock = []
             for res in data_load["search_results"]:
-                qwen_awnser = "hello awnser"
+                context = "\n\n".join([
+                    self.merge_search.get_text_chunk(MinimalSource(**src))
+                    for src in res["retrieved_sources"]
+                ])
+                qwen_awnser = self.load_qwen().generate(query=res["question"],
+                                                        context=context)
 
                 awnser_stock.append(
                     MinimalAnswer(
@@ -125,18 +143,18 @@ class RagCli:
                     ).model_dump()
                 )
 
-                awnser_output = StudentSearchResultsAndAnswer(
-                    search_results=awnser_stock, k=10
-                ).model_dump()
+            awnser_output = StudentSearchResultsAndAnswer(
+                search_results=awnser_stock, k=10
+            ).model_dump()
 
-                output_dir = Path(save_directory)
-                os.makedirs(output_dir, exist_ok=True)
-                file = output_dir / Path(student_search_results_path).name
+            output_dir = Path(save_directory)
+            os.makedirs(output_dir, exist_ok=True)
+            file = output_dir / Path(student_search_results_path).name
 
-                with open(file, "w", encoding="UTF-8") as f:
-                    student_awnser = json.dump(awnser_output, f, indent=4)
-                    print(f"Saved student_search_results_and_answer to {file}")
-                    return student_awnser
+            with open(file, "w", encoding="UTF-8") as f:
+                student_awnser = json.dump(awnser_output, f, indent=4)
+                print(f"Saved student_search_results_and_answer to {file}")
+                return student_awnser
         except (FileNotFoundError, JSONDecodeError) as e:
             print(f"[Error] {e}")
 
