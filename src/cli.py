@@ -5,7 +5,7 @@ from json import JSONDecodeError
 from pathlib import Path
 import json
 import uuid
-
+import os
 
 class RagCli:
     def __init__(self, vllm_path: str) -> None:
@@ -48,7 +48,9 @@ class RagCli:
             answer=qwen_awnser
         ).model_dump()
         try:
-            output_path = Path("data/output/single_query")
+            output_dir = Path("data/output")
+            output_path = output_dir / "single_query"
+            os.makedirs(output_dir, exist_ok=True)
             with open(output_path, "w", encoding="utf-8") as f:
                 query = json.dump(generate_awnser, f, indent=4)
                 return query

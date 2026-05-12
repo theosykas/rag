@@ -124,6 +124,7 @@ class HybridSearch(BaseSearch):
 class LexicalSearch(BaseSearch):
     def __init__(self, vllm_path, idx_path: str):
         super().__init__(vllm_path, idx_path)
+        self.load_index()
 
     def indexing(self, max_chunk_size: int = 2000) -> List[Any]:
         chunking_vllm = self.chunk_vllm(max_chunk_size)
@@ -140,18 +141,27 @@ class LexicalSearch(BaseSearch):
             print(f"[Error] {e}")
         self.retriver.save(save_dir=str(self.idx_save), corpus=chunking_vllm)
 
+    def load_index(self):
+        file_corpus = self.idx_save / "corpus.jsonl"  # "/" == path/theo
+        params_file = self.idx_save / "params.index.json"
+        if params_file.exists() and file_corpus.exists():
+            self.retriver = bm25s.BM25.load(save_dir=str(self.idx_save),
+                                            load_corpus=True)
+            self.data_corpus = self.retriver.corpus
+
     def relevant_search(self, query_user: str,
                         k: int = 10) -> List[MinimalSource]:
         qwery = bm25s.tokenize(query_user)
-        scoring, res_k = self.retriver.retrieve(
+        res_k, scoring = self.retriver.retrieve(
                 query_tokens=qwery, k=k)  # score/k
+        print(res_k[:3])
         return [MinimalSource(**item["source"]) for item in res_k[0]]
 
 
 class SementicalSearch(BaseSearch):
     def __init__(self, vllm_path: str, idx_path: str) -> None:
         super().__init__(vllm_path, idx_path)
-        self.client = chromadb.PersistentClient(str(self.idx_save))
+        self.client = chromadb.PersistentClient(str(self.idx_save))  # charge l'index
         self.collection_chroma = self.client.get_or_create_collection("c_Vllm")
 
     def indexing(self, max_chunk_size: int = 2000,
