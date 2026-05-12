@@ -78,8 +78,8 @@ class BaseSearch(ABC):
 
 
 class HybridSearch(BaseSearch):
-    def __init__(self, lexical: LexicalSearch,
-                 semtentical: SementicalSearch) -> None:
+    def __init__(self, lexical: 'LexicalSearch',
+                 semtentical: 'SementicalSearch') -> None:
         self.model_ranking = CrossEncoder("ms-marco-MiniLM-L-6-v2")
         self.sementical_engine = semtentical
         self.lexical_engine = lexical
