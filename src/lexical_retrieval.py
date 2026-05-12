@@ -12,7 +12,6 @@ from pathlib import Path
 import chromadb
 import bm25s
 import os
-import traceback
 
 
 class BaseSearch(ABC):
@@ -94,8 +93,8 @@ class HybridSearch(BaseSearch):
         return content[src.first_character_index: src.last_character_index]
 
     def relevant_search(self, query: str, k: int = 10):
-        lex_res = self.lexical_engine.relevant_search([query], k=k)
-        sem_res = self.sementical_engine.relevant_search([query], k=k)
+        lex_res = self.lexical_engine.relevant_search(query, k=k)
+        sem_res = self.sementical_engine.relevant_search(query, k=k)
         pairs_cross = []
         unique_source = self.check_duplicated(lex_res + sem_res)
         for raw_src in unique_source:
@@ -151,17 +150,17 @@ class LexicalSearch(BaseSearch):
 
     def relevant_search(self, query_user: str,
                         k: int = 10) -> List[MinimalSource]:
-        qwery = bm25s.tokenize(query_user)
+        qwery = bm25s.tokenize([query_user])
         res_k, scoring = self.retriver.retrieve(
                 query_tokens=qwery, k=k)  # score/k
-        print(res_k[:3])
+        # print(scoring)
         return [MinimalSource(**item["source"]) for item in res_k[0]]
 
 
 class SementicalSearch(BaseSearch):
     def __init__(self, vllm_path: str, idx_path: str) -> None:
         super().__init__(vllm_path, idx_path)
-        self.client = chromadb.PersistentClient(str(self.idx_save))  # charge l'index
+        self.client = chromadb.PersistentClient(str(self.idx_save))  # load_idx
         self.collection_chroma = self.client.get_or_create_collection("c_Vllm")
 
     def indexing(self, max_chunk_size: int = 2000,
@@ -174,7 +173,7 @@ class SementicalSearch(BaseSearch):
         embeddings = model_embedding.encode(txt,
                                             show_progress_bar=True)
         for i in range(0, len(chunking_vllm), batch_size):
-            end = min(i + batch_size, len(chunking_vllm))  # 0 iter + 5000 12000
+            end = min(i + batch_size, len(chunking_vllm))  # 0 i + 5000 12000
             self.collection_chroma.add(
                 documents=txt[i:end],  # [0:5000]
                 embeddings=embeddings[i:end],
@@ -189,7 +188,7 @@ class SementicalSearch(BaseSearch):
     def relevant_search(self, query_user: str,
                         k: int = 10) -> List[MinimalSource]:
         resultat = self.collection_chroma.query(
-            query_texts=query_user,
+            query_texts=[query_user],
             n_results=k
         )
         return [MinimalSource(**item)

@@ -4,6 +4,7 @@
 from colorama import Fore
 from .cli import RagCli
 import fire
+import traceback
 
 
 def main():
@@ -15,11 +16,12 @@ def main():
     #                                       idx_path="data/processed/"
     #                                       "chromaDB_index")
     try:
-        rag_cli = RagCli("vllm-0.10.1")
+        rag_cli = RagCli("data/raw/vllm-0.10.1")
         fire.Fire(rag_cli)
         # generate.generate_json()
         # print(f"Indexing done in {elapsed:.1f}s / 300s max")
     except Exception as e:
+        traceback.print_exc()
         print(f'{Fore.RED}[ERROR] {e}')
 
 
