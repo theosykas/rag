@@ -16,6 +16,10 @@ clean:
 	@echo 'remove artefact files'
 	rm -rf .venv .uv
 	rm -rf $(SRC)/__pycache__
+	rm -rf data/output/search_results
+	rm -rf data/output/searchSingleQuery
+	rm -rf data/Output_SingleQuery
+	rm -rf data/processed
 
 debug:
 	uv run python -m pdb -m ${SRC}

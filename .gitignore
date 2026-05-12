@@ -8,3 +8,4 @@ wheels/
 data/processed
 # Virtual environments
 .venv
+.vscode

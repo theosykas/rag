@@ -30,7 +30,7 @@ class RagCli:
 
     def search(self, single_query: str, k: int = 10) -> List[str]:
         sources = self.merge_search.relevant_search(single_query, k=k)
-        output_dir = Path("data/output")
+        output_dir = Path("data/output/searchSingleQuery")
         output_path = output_dir / "search.json"
         try:
             os.makedirs(output_dir, exist_ok=True)
