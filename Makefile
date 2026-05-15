@@ -20,7 +20,8 @@ clean:
 	rm -rf data/output/searchSingleQuery
 	rm -rf data/Output_SingleQuery
 	rm -rf data/processed
-	rm -rf data/output/search_results_and_awnser
+	rm -rf data/output/search_results_and_answer
+	rm -rf output
 
 debug:
 	uv run python -m pdb -m ${SRC}

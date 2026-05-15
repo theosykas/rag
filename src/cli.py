@@ -6,10 +6,11 @@ from .data_models import (
     MinimalAnswer,
     MinimalSource
 )
-from .qwen3_06B import Qwen
 from typing import List, Dict, Any
 from json import JSONDecodeError
+from .qwen3_06B import Qwen
 from pathlib import Path
+from tqdm import tqdm
 import uuid
 import json
 import os
@@ -40,6 +41,7 @@ class RagCli:
         self.sementical_engine.indexing(max_chunk_size)
         return "Ingestion complete! Indices saved under data/processed/"
 
+    # rev search -> MinimalSRC
     def search(self, single_query: str, k: int = 10) -> List[str]:
         sources = self.merge_search.relevant_search(single_query, k=k)
         output_dir = Path("data/output/searchSingleQuery")
@@ -47,7 +49,7 @@ class RagCli:
         try:
             os.makedirs(output_dir, exist_ok=True)
             with open(output_path, "w", encoding="UTF-8") as f:
-                json.dump([sources.model_dump() for sources in sources],
+                json.dump([source.model_dump() for source in sources],
                           f, indent=4)
                 print(f"Sources search saved in {output_path}")
         except OSError as e:
@@ -65,7 +67,8 @@ class RagCli:
                 load_data = json.load(f)
             # minimal_search formt suject
             search_result = []
-            for question in load_data["rag_questions"]:
+            for question in tqdm(load_data["rag_questions"],
+                                 desc="search_dataset"):
                 retrive_sources = self.merge_search.relevant_search(
                     question["question"], k=k
                 )
@@ -120,13 +123,14 @@ class RagCli:
         except OSError as e:
             print(f"[Error] {e}")
 
-    def awnser_dataset(self, student_search_results_path: Path,
+    def answer_dataset(self, student_search_results_path: Path,
                        save_directory: Path):
         try:
             with open(student_search_results_path, "r", encoding="UTF-8") as f:
                 data_load = json.load(f)
             awnser_stock = []
-            for res in data_load["search_results"]:
+            for res in tqdm(data_load["search_results"],
+                            desc="awnser generation"):
                 context = "\n\n".join([
                     self.merge_search.get_text_chunk(MinimalSource(**src))
                     for src in res["retrieved_sources"]

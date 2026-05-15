@@ -9,7 +9,6 @@ class Qwen:
         )
 
     def generate(self, query: str, context: str) -> str:
-        print('[Qwen] load')
         messages = [
             {
                 "role": "system",
@@ -18,19 +17,16 @@ class Qwen:
             },
             {
                 "role": "user",
-                "content": f"Context:\n{context}\n\nQuestion: {query}"
+                "content": f"Context:\n{context[:400]}\n\nQuestion: {query}"
             },
         ]
         text = self.tokenizer.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True,
             enable_thinking=False
         )
-        print('Qwen tokenize')
         model_input = self.tokenizer(
             [text], return_tensors="pt").to(self.model.device)
-        print('Qwen chunk')
-        output = self.model.generate(**model_input, max_new_tokens=512)
+        output = self.model.generate(**model_input, max_new_tokens=200)
         output_ids = output[0][len(model_input.input_ids[0]):]
-        print('Qwen reponse')
         return self.tokenizer.decode(
             output_ids, skip_special_tokens=True).strip()

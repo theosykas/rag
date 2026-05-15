@@ -7,8 +7,8 @@ from langchain_text_splitters import (
 )
 from abc import ABC, abstractmethod
 from typing import List, Any, Dict
-from colorama import Fore, Style
 from pathlib import Path
+from tqdm import tqdm
 import chromadb
 import bm25s
 import os
@@ -31,7 +31,8 @@ class BaseSearch(ABC):
         default_split = RecursiveCharacterTextSplitter(
             chunk_size=max_chunk_size, chunk_overlap=200  # ovelap === char
         )
-        for llm_file in Path(self.vllm_path).rglob("*"):
+        for llm_file in tqdm(list(Path(self.vllm_path).rglob("*")),
+                             desc="Chunking_vllm"):
             if not llm_file.is_file():
                 continue
             suffix = llm_file.suffix
@@ -44,8 +45,6 @@ class BaseSearch(ABC):
             try:
                 data_analyse = llm_file.read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
-                print(f"invalid file extension {Fore.GREEN}{suffix}"
-                      f"{Style.RESET_ALL}")
                 continue
             chunk_text = splitter.split_text(data_analyse)
             search_idx_pos = 0
