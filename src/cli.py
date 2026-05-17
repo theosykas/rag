@@ -4,7 +4,9 @@ from .data_models import (
     MinimalSearchResults,
     StudentSearchResults,
     MinimalAnswer,
-    MinimalSource
+    MinimalSource, 
+    RagDataset,
+    AnsweredQuestion
 )
 from typing import List, Dict, Any
 from json import JSONDecodeError
@@ -162,5 +164,59 @@ class RagCli:
         except (FileNotFoundError, JSONDecodeError) as e:
             print(f"[Error] {e}")
 
-    def evaluate_res(self, data_ref: str) -> Dict[str, Any]:
-        pass
+    def get_overlap(self, retriverd_data: MinimalSource,
+                    correct: MinimalSource) -> float:
+
+        if retriverd_data.file_path != correct.file_path:
+            return 0.0
+
+        inter_1 = (retriverd_data.first_character_index,
+                   retriverd_data.last_character_index)
+        inter_2 = (correct.first_character_index,
+                   correct.last_character_index)
+
+        # min(0, 5)
+        #     [0] [1]  pos tuple
+        overlap = max(0, min(inter_1[1], inter_2[1]) -
+                      max(inter_1[0], inter_2[0]))
+        correct_data = inter_2[1] - inter_2[0]  # fin. - debut
+        if correct_data == 0:
+            return 0.0
+        return overlap / correct_data
+
+    def evaluate(self, student_answer_path: Path,
+                 dataset_path: Path,
+                 k: int,
+                 max_context_length: int) -> Dict[str, Any]:
+        try:
+            with open(student_answer_path, 'r', encoding='UTF-8') as f:
+                student_data = StudentSearchResults(**json.loads(f.read()))
+            with open(dataset_path, 'r', encoding='UTF-8') as f:
+                dataset = RagDataset(**json.loads(f.read()))
+            recall_final = 0.0
+            for i, quest in enumerate(dataset.rag_questions):
+                if not isinstance(quest, AnsweredQuestion):
+                    continue
+                found = 0.0
+                srcs_inter = quest.sources
+                ret_srcs = student_data.search_results[i].retrieved_sources
+                for src in srcs_inter:
+                    for ret in ret_srcs:
+                        if self.get_overlap(ret, src) >= 0.05:
+                            found += 1
+                            break
+                if len(srcs_inter) > 0:
+                    recall_final += found / len(srcs_inter)
+                else:
+                    recall_final == 0
+            total_query = len(dataset.rag_questions)
+            print(f'Recall@{student_data.k}:',
+                  recall_final / total_query if total_query > 0 else 0)
+        except Exception as e:
+            print(f'[Error] {e}')
+
+
+#   interval1:  |-------|          (de 0 à 7) retrive
+#                   |-------|    (de 5 à 10) :correct
+
+#              0    5    7   10
