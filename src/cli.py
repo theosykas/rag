@@ -4,7 +4,7 @@ from .data_models import (
     MinimalSearchResults,
     StudentSearchResults,
     MinimalAnswer,
-    MinimalSource, 
+    MinimalSource,
     RagDataset,
     AnsweredQuestion
 )

@@ -29,6 +29,6 @@ debug:
 lint:
 	@echo 'check quality code (mypy/flake8) norme'
 	flake8 src --exclude .venv
-	mypy . --strict --warn-return-any \
+	mypy src --strict --warn-return-any \
 	--warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs \
 	--check-untyped-defs
