@@ -98,7 +98,7 @@ class RagCli:
         except (FileNotFoundError, JSONDecodeError) as e:
             print(f"[Error] {e}")
 
-    def awnser(self, single_query: str, k: int = 10) -> str:
+    def answer(self, single_query: str, k: int = 10) -> str:
         # return awnser into json file
         hybrid_search = self.merge_search.relevant_search(single_query, k=k)
         context = "\n\n".join([
