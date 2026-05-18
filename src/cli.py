@@ -12,7 +12,6 @@ from json import JSONDecodeError
 from typing import Optional
 from .qwen3_06B import Qwen
 from pathlib import Path
-from typing import List
 from tqdm import tqdm
 import uuid
 import json
@@ -67,9 +66,9 @@ class RagCli:
         """
         self.lexical_engine.indexing(max_chunk_size)
         self.sementical_engine.indexing(max_chunk_size)
-        return "Ingestion complete! Indices saved under data/processed/"
+        print("Ingestion complete! Indices saved under data/processed/")
 
-    def search(self, single_query: str, k: int = 10) -> List[MinimalSource]:
+    def search(self, single_query: str, k: int = 10) -> None:
         """Run a hybrid retrieval for a single query and save results.
 
         Args:
