@@ -167,6 +167,22 @@ The unified indexing and inference infrastructure easily accommodates strict pro
 
 ---
 
+### Analyse awnser
+```bash
+i=42
+jq -s --argjson i "$i" '
+. as [$docs, $results]
+| {
+index: $i,
+question: $docs.rag_questions[$i].question,
+expected: $docs.rag_questions[$i].answer,
+predicted: $results.search_results[$i].answer
+}' data/datasets/AnsweredQuestions/dataset_docs_public.json \
+data/output/search_results_and_answer/dataset_docs_public.json
+```
+
+---
+
 ## Challenges Faced
 
 Building a specialized RAG system for a complex codebase like `vllm` introduced several technical hurdles. Below are the core difficulties encountered during development and the engineering solutions implemented to resolve them:
