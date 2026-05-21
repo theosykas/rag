@@ -1,0 +1,57 @@
+{
+    "question_id": "5ecb0d28-bd99-4e3f-a28e-7ed15401da2b",
+    "question": "how to configure open AI server",
+    "retrieved_sources": [
+        {
+            "file_path": "data/raw/vllm-0.10.1/vllm/model_executor/models/molmo.py",
+            "first_character_index": 7498,
+            "last_character_index": 8280
+        },
+        {
+            "file_path": "data/raw/vllm-0.10.1/csrc/quantization/marlin/qqq/marlin_qqq_gemm_kernel.cu",
+            "first_character_index": 35704,
+            "last_character_index": 35709
+        },
+        {
+            "file_path": "data/raw/vllm-0.10.1/vllm/model_executor/models/molmo.py",
+            "first_character_index": 5632,
+            "last_character_index": 7488
+        },
+        {
+            "file_path": "data/raw/vllm-0.10.1/tests/prompts/summary.txt",
+            "first_character_index": 9003,
+            "last_character_index": 11001
+        },
+        {
+            "file_path": "data/raw/vllm-0.10.1/vllm/model_executor/models/molmo.py",
+            "first_character_index": 23416,
+            "last_character_index": 25229
+        },
+        {
+            "file_path": "data/raw/vllm-0.10.1/vllm/model_executor/models/molmo.py",
+            "first_character_index": 4770,
+            "last_character_index": 5629
+        },
+        {
+            "file_path": "data/raw/vllm-0.10.1/vllm/model_executor/models/molmo.py",
+            "first_character_index": 9923,
+            "last_character_index": 11836
+        },
+        {
+            "file_path": "data/raw/vllm-0.10.1/vllm/model_executor/models/molmo.py",
+            "first_character_index": 16789,
+            "last_character_index": 17891
+        },
+        {
+            "file_path": "data/raw/vllm-0.10.1/vllm/model_executor/models/molmo.py",
+            "first_character_index": 14326,
+            "last_character_index": 16271
+        },
+        {
+            "file_path": "data/raw/vllm-0.10.1/vllm/model_executor/models/molmo.py",
+            "first_character_index": 11846,
+            "last_character_index": 12682
+        }
+    ],
+    "answer": "The forward method of the self-contained code is used to perform operations on the input tensors."
+}

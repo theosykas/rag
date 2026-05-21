@@ -187,6 +187,8 @@ class RagCli:
             errors
                 when generating the output tracking directory or file.
         """
+        if not single_query or single_query.strip() == "":
+            raise ValueError('Error query can not be empty')
         hybrid_search = self.merge_search.relevant_search(single_query, k=k)
         context = "\n\n".join(
             [self.merge_search.get_text_chunk(src) for src in hybrid_search]
@@ -246,6 +248,8 @@ class RagCli:
             total_len = len(data_load["search_results"])
             for i, res in enumerate(tqdm(data_load["search_results"],
                                          desc="awnser generation")):
+                if not res['questions'] or res['questions'].strip() == "":
+                    raise ValueError(f'Error invalid query at index {i}')
                 print(f"processed {i + 1} of {total_len} questions")
                 context = "\n\n".join(
                     [
