@@ -1,6 +1,6 @@
 {
     "question_id": "5ecb0d28-bd99-4e3f-a28e-7ed15401da2b",
-    "question": "how to configure open AI server",
+    "question": "",
     "retrieved_sources": [
         {
             "file_path": "data/raw/vllm-0.10.1/vllm/model_executor/models/molmo.py",

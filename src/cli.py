@@ -248,7 +248,7 @@ class RagCli:
             total_len = len(data_load["search_results"])
             for i, res in enumerate(tqdm(data_load["search_results"],
                                          desc="awnser generation")):
-                if not res['questions'] or res['questions'].strip() == "":
+                if not res['question'] or res['question'].strip() == "":
                     raise ValueError(f'Error invalid query at index {i}')
                 print(f"processed {i + 1} of {total_len} questions")
                 context = "\n\n".join(
