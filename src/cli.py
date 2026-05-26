@@ -18,6 +18,10 @@ import json
 import os
 
 
+def lulu() -> None:
+    pass
+
+
 class RagCli:
     def __init__(self, vllm_path: str) -> None:
         """RAG command-line helper.
